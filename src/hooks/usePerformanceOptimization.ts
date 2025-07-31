@@ -62,40 +62,23 @@ export const usePerformanceOptimization = () => {
   const performanceHistoryRef = useRef<number[]>([]);
   const adaptiveQualityRef = useRef(true);
   
-  // FPS monitoring and adaptive quality adjustment
-  useFrame((state, delta) => {
-    frameCountRef.current++;
-    const now = Date.now();
+  // Manual FPS monitoring without useFrame (will be updated from Canvas component)
+  const updateMetrics = useCallback((newMetrics: Partial<PerformanceMetrics>) => {
+    setMetrics(prev => ({ ...prev, ...newMetrics }));
     
-    // Calculate FPS every second
-    if (now - lastTimeRef.current >= 1000) {
-      const fps = frameCountRef.current;
-      const frameTime = 1000 / fps;
-      
-      setMetrics(prev => ({
-        ...prev,
-        fps,
-        frameTime,
-        memoryUsage: (performance as any).memory?.usedJSHeapSize || 0,
-        renderCalls: state.gl.info.render.calls || 0,
-        triangles: state.gl.info.render.triangles || 0
-      }));
-      
+    if (newMetrics.fps) {
       // Store performance history for trend analysis
-      performanceHistoryRef.current.push(fps);
+      performanceHistoryRef.current.push(newMetrics.fps);
       if (performanceHistoryRef.current.length > 30) {
         performanceHistoryRef.current.shift();
       }
       
       // Adaptive quality adjustment
       if (settings.adaptiveQuality && adaptiveQualityRef.current) {
-        adjustQualityBasedOnPerformance(fps);
+        adjustQualityBasedOnPerformance(newMetrics.fps);
       }
-      
-      frameCountRef.current = 0;
-      lastTimeRef.current = now;
     }
-  });
+  }, [settings.adaptiveQuality]);
 
   const adjustQualityBasedOnPerformance = useCallback((fps: number) => {
     const targetFPS = settings.targetFPS;
@@ -222,6 +205,8 @@ export const usePerformanceOptimization = () => {
     limit: number;
     percentage: number;
   } => {
+    if (typeof performance === 'undefined') return { used: 0, limit: 0, percentage: 0 };
+    
     const memory = (performance as any).memory;
     if (!memory) return { used: 0, limit: 0, percentage: 0 };
     
@@ -233,7 +218,7 @@ export const usePerformanceOptimization = () => {
   }, []);
 
   const forceGarbageCollection = useCallback(() => {
-    if ((window as any).gc) {
+    if (typeof window !== 'undefined' && (window as any).gc) {
       (window as any).gc();
     }
   }, []);
@@ -291,6 +276,7 @@ export const usePerformanceOptimization = () => {
     settings,
     metrics,
     updateSettings,
+    updateMetrics,
     resetToDefaults,
     getLODLevel,
     getGeometryComplexity,

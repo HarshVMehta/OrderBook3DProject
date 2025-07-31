@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { OrderbookScene3D } from '@/components/3d/OrderbookScene3D';
 import PressureZoneStats from '@/components/ui/PressureZoneStats';
 import ExportControlPanel from '@/components/ui/ExportControlPanel';
+import RotationControlPanel from '@/components/ui/RotationControlPanel';
 import { useOrderbook } from '@/hooks/useOrderbook_simple';
 import { PressureZoneAnalyzer } from '@/services/pressureZoneAnalyzer';
 import { OrderbookExportService } from '@/services/exportService';
@@ -11,7 +12,11 @@ import { OrderbookExportService } from '@/services/exportService';
 export default function Enhanced3DVisualizationPage() {
   const [showPressureStats, setShowPressureStats] = useState(true);
   const [showExportPanel, setShowExportPanel] = useState(false);
+  const [showRotationControls, setShowRotationControls] = useState(false);
   const [autoRotate, setAutoRotate] = useState(false);
+  const [rotationSpeed, setRotationSpeed] = useState(0.5);
+  const [rotationAxis, setRotationAxis] = useState<'x' | 'y' | 'z'>('z');
+  const [cameraReset, setCameraReset] = useState(0);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [currentTime, setCurrentTime] = useState<string>('');
   const [isMounted, setIsMounted] = useState(false);
@@ -58,6 +63,22 @@ export default function Enhanced3DVisualizationPage() {
 
   const handleThemeToggle = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const handleResetCamera = () => {
+    setCameraReset(prev => prev + 1); // Trigger camera reset
+  };
+
+  const handleRotationToggle = () => {
+    setAutoRotate(!autoRotate);
+  };
+
+  const handleRotationSpeedChange = (speed: number) => {
+    setRotationSpeed(speed);
+  };
+
+  const handleRotationAxisChange = (axis: 'x' | 'y' | 'z') => {
+    setRotationAxis(axis);
   };
 
   // Calculate current price from data
@@ -141,6 +162,9 @@ export default function Enhanced3DVisualizationPage() {
             pressureZones={pressureZoneAnalysis?.zones || []}
             showPressureZones={showPressureStats}
             autoRotate={autoRotate}
+            rotationSpeed={rotationSpeed}
+            rotationAxis={rotationAxis}
+            cameraReset={cameraReset}
             cameraSettings={cameraSettings}
             theme={theme}
           />
@@ -160,6 +184,13 @@ export default function Enhanced3DVisualizationPage() {
             className="bg-card hover:bg-accent text-foreground px-3 py-2 rounded-lg text-sm transition-colors border border-border"
           >
             📥 Export
+          </button>
+          
+          <button
+            onClick={() => setShowRotationControls(!showRotationControls)}
+            className="bg-card hover:bg-accent text-foreground px-3 py-2 rounded-lg text-sm transition-colors border border-border"
+          >
+            🔄 Rotation
           </button>
         </div>
 
@@ -181,6 +212,21 @@ export default function Enhanced3DVisualizationPage() {
               pressureZoneAnalysis={pressureZoneAnalysis}
               symbol="BTCUSDT"
               className="max-h-96 overflow-y-auto"
+            />
+          </div>
+        )}
+
+        {/* Rotation Control Panel */}
+        {showRotationControls && (
+          <div className="absolute top-64 left-4 z-10 w-80">
+            <RotationControlPanel
+              rotationSpeed={rotationSpeed}
+              rotationAxis={rotationAxis}
+              onRotationSpeedChange={handleRotationSpeedChange}
+              onRotationAxisChange={handleRotationAxisChange}
+              onResetCamera={handleResetCamera}
+              onToggleRotation={handleRotationToggle}
+              isRotating={rotationSpeed > 0}
             />
           </div>
         )}

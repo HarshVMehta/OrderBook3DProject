@@ -429,8 +429,8 @@ export const Enhanced3DOrderbook: React.FC<Enhanced3DOrderbookProps> = ({
       {/* Heatmap overlay */}
       {renderHeatmap()}
       
-      {/* Interactive tooltip */}
-      {hoveredBar && (
+      {/* Interactive tooltip - temporarily disabled to fix HTML element error */}
+      {/* {hoveredBar && (
         <Html position={hoveredBar.position}>
           <div className="bg-gray-900 text-white p-2 rounded shadow-lg pointer-events-none">
             <div className="text-sm">
@@ -441,7 +441,7 @@ export const Enhanced3DOrderbook: React.FC<Enhanced3DOrderbookProps> = ({
             </div>
           </div>
         </Html>
-      )}
+      )} */}
       
       {/* Grid lines for better depth perception */}
       <group>

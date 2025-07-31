@@ -117,6 +117,18 @@ export const useResponsiveDesign = () => {
 
   // Detect device capabilities and performance
   const detectDeviceInfo = useCallback((): DeviceInfo => {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      return {
+        type: 'desktop',
+        isTouchDevice: false,
+        orientation: 'landscape',
+        screenSize: { width: 1920, height: 1080 },
+        pixelRatio: 1,
+        isLowEnd: false
+      };
+    }
+
     const width = window.innerWidth;
     const height = window.innerHeight;
     const pixelRatio = window.devicePixelRatio || 1;
@@ -149,6 +161,9 @@ export const useResponsiveDesign = () => {
   }, []);
 
   const detectLowEndDevice = useCallback((): boolean => {
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') return false;
+    
     // Check for various indicators of low-end devices
     const navigator = window.navigator;
     const hardwareConcurrency = navigator.hardwareConcurrency || 2;
@@ -176,6 +191,9 @@ export const useResponsiveDesign = () => {
 
   // Update device info on resize and orientation change
   useEffect(() => {
+    // Only run in browser environment
+    if (typeof window === 'undefined') return;
+
     const updateDeviceInfo = () => {
       setDeviceInfo(detectDeviceInfo());
     };
@@ -323,6 +341,8 @@ export const useResponsiveDesign = () => {
 
   // Fullscreen API helpers
   const toggleFullscreen = useCallback(async () => {
+    if (typeof document === 'undefined') return;
+    
     try {
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
@@ -335,12 +355,13 @@ export const useResponsiveDesign = () => {
   }, []);
 
   const supportsFullscreen = useCallback(() => {
+    if (typeof document === 'undefined') return false;
     return !!(document.documentElement.requestFullscreen);
   }, []);
 
   // Haptic feedback for touch devices
   const triggerHapticFeedback = useCallback((intensity: 'light' | 'medium' | 'heavy' = 'light') => {
-    if (!touchControls.hapticFeedback || !deviceInfo.isTouchDevice) return;
+    if (typeof navigator === 'undefined' || !touchControls.hapticFeedback || !deviceInfo.isTouchDevice) return;
     
     if ('vibrate' in navigator) {
       const patterns = {

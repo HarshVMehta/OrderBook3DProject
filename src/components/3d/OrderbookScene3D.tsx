@@ -1,16 +1,24 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, PerspectiveCamera, Environment } from '@react-three/drei';
 import Enhanced3DOrderbook from './Enhanced3DOrderbook';
+import { PerformanceMonitor } from './PerformanceMonitor';
 import { ProcessedOrderbookData, PressureZone, CameraSettings } from '@/types/orderbook';
+import { usePerformanceOptimization } from '@/hooks/usePerformanceOptimization';
+import { useResponsiveDesign } from '@/hooks/useResponsiveDesign';
+import { useTouch3DControls } from '@/hooks/useTouchControls';
+import { MobileTouchControls, MobilePerformanceIndicator } from '@/components/ui/MobileTouchControls';
 
 interface OrderbookScene3DProps {
   data: ProcessedOrderbookData | null;
   pressureZones: PressureZone[];
   showPressureZones: boolean;
   autoRotate: boolean;
+  rotationSpeed?: number;
+  rotationAxis?: 'x' | 'y' | 'z';
+  cameraReset?: number;
   cameraSettings: CameraSettings;
   theme: 'dark' | 'light';
 }
@@ -20,14 +28,84 @@ export const OrderbookScene3D: React.FC<OrderbookScene3DProps> = ({
   pressureZones,
   showPressureZones,
   autoRotate,
+  rotationSpeed = 0.5,
+  rotationAxis = 'z',
+  cameraReset = 0,
   cameraSettings,
   theme
 }) => {
+  // Performance and responsive design hooks
+  const { 
+    settings: performanceSettings, 
+    metrics,
+    updateMetrics,
+    optimizeOrderData,
+    getLODLevel,
+    shouldRenderObject 
+  } = usePerformanceOptimization();
+  
+  const { 
+    deviceInfo, 
+    getCurrentSettings,
+    getCanvasSize,
+    getTouchControlsConfig,
+    getUILayout 
+  } = useResponsiveDesign();
+  
+  const { 
+    touchHandlers, 
+    isTouchDevice,
+    resetCamera 
+  } = useTouch3DControls();
+
+  // Get responsive settings
+  const responsiveSettings = getCurrentSettings();
+  const canvasSize = getCanvasSize();
+  const uiLayout = getUILayout();
+  
+  // Optimize data based on device capabilities and performance
+  const optimizedData = useMemo(() => {
+    if (!data) return null;
+    
+    const maxOrders = Math.min(
+      responsiveSettings.maxOrdersToRender,
+      performanceSettings.maxOrdersToRender
+    );
+    
+    return {
+      ...data,
+      bids: optimizeOrderData(data.bids, Math.floor(maxOrders / 2)),
+      asks: optimizeOrderData(data.asks, Math.floor(maxOrders / 2))
+    };
+  }, [data, responsiveSettings, performanceSettings, optimizeOrderData]);
+
   const backgroundColor = theme === 'dark' ? '#0f0f23' : '#ffffff';
   const ambientLightIntensity = theme === 'dark' ? 0.4 : 0.8;
 
+  // Adjust lighting based on device performance
+  const lightingConfig = useMemo(() => ({
+    ambientIntensity: responsiveSettings.enableShadows ? ambientLightIntensity : ambientLightIntensity * 1.5,
+    directionalIntensity: responsiveSettings.enableShadows ? 1 : 0.7,
+    enableShadows: responsiveSettings.enableShadows
+  }), [responsiveSettings, ambientLightIntensity]);
+
   return (
-    <div className="w-full h-full bg-gray-900 relative">
+    <div 
+      className="w-full h-full bg-gray-900 relative"
+      onTouchStart={isTouchDevice ? (e) => touchHandlers.onTouchStart(e.nativeEvent) : undefined}
+      onTouchMove={isTouchDevice ? (e) => touchHandlers.onTouchMove(e.nativeEvent) : undefined}
+      onTouchEnd={isTouchDevice ? (e) => touchHandlers.onTouchEnd(e.nativeEvent) : undefined}
+      onTouchCancel={isTouchDevice ? (e) => touchHandlers.onTouchCancel(e.nativeEvent) : undefined}
+    >
+      {/* Mobile Performance Indicator */}
+      <MobilePerformanceIndicator 
+        fps={metrics.fps}
+        quality={responsiveSettings.animationQuality}
+      />
+      
+      {/* Mobile Touch Controls */}
+      <MobileTouchControls onCameraReset={resetCamera} />
+      
       <Canvas
         style={{ background: backgroundColor }}
         camera={{
@@ -36,16 +114,28 @@ export const OrderbookScene3D: React.FC<OrderbookScene3DProps> = ({
           near: cameraSettings.near,
           far: cameraSettings.far
         }}
+        gl={{
+          antialias: responsiveSettings.enableAntialiasing,
+          powerPreference: deviceInfo.isLowEnd ? 'low-power' : 'high-performance',
+          alpha: false, // Better performance
+          stencil: false, // Better performance
+          depth: true
+        }}
+        dpr={Math.min(window.devicePixelRatio, deviceInfo.type === 'mobile' ? 2 : 3)}
+        resize={{ offsetSize: true }}
       >
         <Suspense fallback={null}>
-          {/* Enhanced Lighting for 3D Orderbook */}
-          <ambientLight intensity={ambientLightIntensity} />
+          {/* Performance monitoring inside Canvas */}
+          <PerformanceMonitor onMetricsUpdate={updateMetrics} />
+          
+          {/* Adaptive Lighting for Performance */}
+          <ambientLight intensity={lightingConfig.ambientIntensity} />
           <directionalLight 
             position={[10, 10, 5]} 
-            intensity={0.8}
-            castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
+            intensity={lightingConfig.directionalIntensity}
+            castShadow={lightingConfig.enableShadows}
+            shadow-mapSize-width={lightingConfig.enableShadows ? 2048 : 1024}
+            shadow-mapSize-height={lightingConfig.enableShadows ? 2048 : 1024}
           />
           <pointLight position={[-10, -10, -10]} intensity={0.3} />
           <pointLight position={[10, -10, 10]} intensity={0.2} color="#4ade80" />
@@ -54,18 +144,18 @@ export const OrderbookScene3D: React.FC<OrderbookScene3DProps> = ({
           {/* Environment */}
           <Environment preset={theme === 'dark' ? 'night' : 'dawn'} />
 
-          {/* Enhanced 3D Orderbook Visualization with Price-Quantity-Time axes */}
-          {data && data.bids.length > 0 && data.asks.length > 0 && (
+          {/* Enhanced 3D Orderbook Visualization with Performance Optimization */}
+          {optimizedData && optimizedData.bids.length > 0 && optimizedData.asks.length > 0 && (
             <Enhanced3DOrderbook 
-              data={data}
+              data={optimizedData}
               pressureZones={pressureZones}
               showPressureZones={showPressureZones}
               showHeatmap={showPressureZones}
-              showAxisLabels={true}
+              showAxisLabels={false}
               autoRotate={autoRotate}
-              timeDepth={20}
+              timeDepth={deviceInfo.isLowEnd ? 10 : 20}
               interactionEnabled={true}
-              volumeScale={1.0}
+              volumeScale={responsiveSettings.animationQuality === 'high' ? 1.0 : 0.8}
               timeWindowMs={60000} // 1 minute time window
             />
           )}
@@ -92,20 +182,24 @@ export const OrderbookScene3D: React.FC<OrderbookScene3DProps> = ({
             </mesh>
           </group>
 
-          {/* Interactive Camera Controls */}
+          {/* Responsive Interactive Camera Controls */}
           <OrbitControls
-            enablePan={true}
+            enablePan={!isTouchDevice} // Disable pan on touch devices to avoid conflicts
             enableZoom={true}
             enableRotate={true}
-            autoRotate={autoRotate}
-            autoRotateSpeed={0.5}
-            maxDistance={50}
-            minDistance={5}
+            autoRotate={autoRotate && rotationSpeed > 0}
+            autoRotateSpeed={rotationSpeed}
+            maxDistance={responsiveSettings.cameraDistance * 2}
+            minDistance={responsiveSettings.cameraDistance * 0.3}
             maxPolarAngle={Math.PI * 0.8}
             minPolarAngle={Math.PI * 0.1}
             target={cameraSettings.target}
             enableDamping={true}
-            dampingFactor={0.05}
+            dampingFactor={deviceInfo.type === 'mobile' ? 0.1 : 0.05}
+            rotateSpeed={deviceInfo.type === 'mobile' ? 1.5 : 1.0}
+            zoomSpeed={deviceInfo.type === 'mobile' ? 1.2 : 1.0}
+            panSpeed={deviceInfo.type === 'mobile' ? 1.5 : 1.0}
+            key={cameraReset} // Force reset when cameraReset changes
           />
 
           {/* Custom Camera */}
@@ -135,52 +229,17 @@ export const OrderbookScene3D: React.FC<OrderbookScene3DProps> = ({
         <div className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-blue-500 bg-opacity-80 text-white px-2 py-1 rounded text-sm font-semibold">
           ↗ Time (Z-axis) ↖
         </div>
-        
-        {/* Axis Legend */}
-        <div className="absolute top-16 left-4 bg-black bg-opacity-70 text-white p-3 rounded-lg backdrop-blur-sm">
-          <h3 className="text-sm font-semibold mb-2">3D Coordinate System</h3>
-          <div className="space-y-1 text-xs">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-1 bg-red-500"></div>
-              <span>X-axis: Price (Low ← → High)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-1 h-3 bg-green-500"></div>
-              <span>Y-axis: Volume (Height)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-1 bg-blue-500 transform rotate-45"></div>
-              <span>Z-axis: Time (Recent ↗ Older)</span>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* 3D Axis Information Overlay */}
-      <div className="absolute top-4 left-4 bg-black bg-opacity-70 text-white p-3 rounded-lg backdrop-blur-sm">
-        <h3 className="text-sm font-semibold mb-2">3D Orderbook Axes</h3>
-        <div className="space-y-1 text-xs">
-          <div><span className="text-blue-400">X-axis:</span> Price (Bid ← → Ask)</div>
-          <div><span className="text-green-400">Y-axis:</span> Volume/Quantity ↑</div>
-          <div><span className="text-purple-400">Z-axis:</span> Time (Past ← → Present)</div>
-        </div>
-        <div className="mt-2 pt-2 border-t border-gray-600">
-          <div className="text-xs text-gray-300">
-            <div>🟢 Green bars = Bid orders</div>
-            <div>🔴 Red bars = Ask orders</div>
-            {showPressureZones && <div>🔵 Cylinders = Pressure zones</div>}
-          </div>
-        </div>
-      </div>
-
-      {/* Controls Information */}
+      {/* 3D Controls Information */}
       <div className="absolute bottom-4 left-4 bg-black bg-opacity-70 text-white p-3 rounded-lg backdrop-blur-sm">
-        <h3 className="text-sm font-semibold mb-2">3D Controls</h3>
+        <div className="text-sm font-semibold mb-2">3D Controls</div>
         <div className="space-y-1 text-xs">
           <div>🖱️ <span className="text-blue-400">Left click + drag:</span> Rotate view</div>
           <div>🔄 <span className="text-green-400">Scroll wheel:</span> Zoom in/out</div>
           <div>🖱️ <span className="text-purple-400">Right click + drag:</span> Pan view</div>
           <div>👆 <span className="text-yellow-400">Click bars:</span> View order details</div>
+          {showPressureZones && <div>🔵 <span className="text-cyan-400">Blue cylinders:</span> Pressure zones</div>}
         </div>
       </div>
 

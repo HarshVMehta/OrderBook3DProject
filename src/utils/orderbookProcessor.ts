@@ -12,26 +12,38 @@ export class OrderbookDataProcessor {
   private historicalData: Map<number, ProcessedOrderbookData> = new Map();
   private maxHistorySize: number = 100;
 
+  // Helper function to safely parse and validate numbers
+  private safeParseFloat(value: string | number): number {
+    const parsed = typeof value === 'string' ? parseFloat(value) : value;
+    return isNaN(parsed) || !isFinite(parsed) ? 0 : parsed;
+  }
+
   public processSnapshot(snapshot: OrderbookSnapshot): ProcessedOrderbookData {
-    const bids = snapshot.bids.map(level => ({
-      price: parseFloat(level.price),
-      quantity: parseFloat(level.quantity),
-      timestamp: snapshot.timestamp
-    }));
+    // Filter and validate bid data
+    const bids = snapshot.bids
+      .map(level => ({
+        price: this.safeParseFloat(level.price),
+        quantity: this.safeParseFloat(level.quantity),
+        timestamp: snapshot.timestamp
+      }))
+      .filter(entry => entry.price > 0 && entry.quantity > 0);
 
-    const asks = snapshot.asks.map(level => ({
-      price: parseFloat(level.price),
-      quantity: parseFloat(level.quantity),
-      timestamp: snapshot.timestamp
-    }));
+    // Filter and validate ask data
+    const asks = snapshot.asks
+      .map(level => ({
+        price: this.safeParseFloat(level.price),
+        quantity: this.safeParseFloat(level.quantity),
+        timestamp: snapshot.timestamp
+      }))
+      .filter(entry => entry.price > 0 && entry.quantity > 0);
 
-    const allQuantities = [...bids, ...asks].map(entry => entry.quantity);
-    const maxQuantity = Math.max(...allQuantities);
+    const allQuantities = [...bids, ...asks].map(entry => entry.quantity).filter(q => isFinite(q) && q > 0);
+    const maxQuantity = allQuantities.length > 0 ? Math.max(...allQuantities) : 1;
     
-    const allPrices = [...bids, ...asks].map(entry => entry.price);
+    const allPrices = [...bids, ...asks].map(entry => entry.price).filter(p => isFinite(p) && p > 0);
     const priceRange = {
-      min: Math.min(...allPrices),
-      max: Math.max(...allPrices)
+      min: allPrices.length > 0 ? Math.min(...allPrices) : 0,
+      max: allPrices.length > 0 ? Math.max(...allPrices) : 1
     };
 
     const processed: ProcessedOrderbookData = {
@@ -54,8 +66,13 @@ export class OrderbookDataProcessor {
 
     // Process bid updates
     update.bids.forEach(level => {
-      const price = parseFloat(level.price);
-      const quantity = parseFloat(level.quantity);
+      const price = this.safeParseFloat(level.price);
+      const quantity = this.safeParseFloat(level.quantity);
+      
+      // Skip invalid entries
+      if (price <= 0 || quantity < 0) {
+        return;
+      }
       
       const existingIndex = updatedBids.findIndex(bid => bid.price === price);
       
@@ -83,8 +100,13 @@ export class OrderbookDataProcessor {
 
     // Process ask updates
     update.asks.forEach(level => {
-      const price = parseFloat(level.price);
-      const quantity = parseFloat(level.quantity);
+      const price = this.safeParseFloat(level.price);
+      const quantity = this.safeParseFloat(level.quantity);
+      
+      // Skip invalid entries
+      if (price <= 0 || quantity < 0) {
+        return;
+      }
       
       const existingIndex = updatedAsks.findIndex(ask => ask.price === price);
       
@@ -110,13 +132,13 @@ export class OrderbookDataProcessor {
       }
     });
 
-    const allQuantities = [...updatedBids, ...updatedAsks].map(entry => entry.quantity);
-    const maxQuantity = Math.max(...allQuantities);
+    const allQuantities = [...updatedBids, ...updatedAsks].map(entry => entry.quantity).filter(q => isFinite(q) && q > 0);
+    const maxQuantity = allQuantities.length > 0 ? Math.max(...allQuantities) : 1;
     
-    const allPrices = [...updatedBids, ...updatedAsks].map(entry => entry.price);
+    const allPrices = [...updatedBids, ...updatedAsks].map(entry => entry.price).filter(p => isFinite(p) && p > 0);
     const priceRange = {
-      min: Math.min(...allPrices),
-      max: Math.max(...allPrices)
+      min: allPrices.length > 0 ? Math.min(...allPrices) : 0,
+      max: allPrices.length > 0 ? Math.max(...allPrices) : 1
     };
 
     const processed: ProcessedOrderbookData = {

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { OrderbookScene3D, PerformanceStats } from '@/components/3d/OrderbookScene3D';
 import { ControlPanel, DataStats } from '@/components/ui/ControlPanel';
 import PressureZoneStats from '@/components/ui/PressureZoneStats';
+import RotationControlPanel from '@/components/ui/RotationControlPanel';
 import { useOrderbook } from '@/hooks/useOrderbook_simple';
 import { VisualizationSettings, CameraSettings } from '@/types/orderbook';
 
@@ -37,6 +38,29 @@ const defaultCameraSettings: CameraSettings = {
 export default function OrderbookVisualizerPage() {
   const [settings, setSettings] = useState<VisualizationSettings>(defaultSettings);
   const [cameraSettings] = useState<CameraSettings>(defaultCameraSettings);
+  
+  // Rotation control state
+  const [rotationSpeed, setRotationSpeed] = useState(0.5);
+  const [rotationAxis, setRotationAxis] = useState<'x' | 'y' | 'z'>('z');
+  const [cameraReset, setCameraReset] = useState(0);
+  const [showRotationControls, setShowRotationControls] = useState(true);
+
+  // Rotation control handlers
+  const handleResetCamera = () => {
+    setCameraReset(prev => prev + 1);
+  };
+
+  const handleRotationToggle = () => {
+    setRotationSpeed(prev => prev > 0 ? 0 : 0.5);
+  };
+
+  const handleRotationSpeedChange = (speed: number) => {
+    setRotationSpeed(speed);
+  };
+
+  const handleRotationAxisChange = (axis: 'x' | 'y' | 'z') => {
+    setRotationAxis(axis);
+  };
 
   const {
     data,
@@ -99,6 +123,31 @@ export default function OrderbookVisualizerPage() {
         className="absolute top-4 right-4 w-80 max-h-96 overflow-y-auto z-10"
       />
 
+      {/* Rotation Control Toggle Button */}
+      <div className="absolute bottom-4 right-4 z-10">
+        <button
+          onClick={() => setShowRotationControls(!showRotationControls)}
+          className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm transition-colors border border-gray-600"
+        >
+          🔄 Rotation Controls
+        </button>
+      </div>
+
+      {/* Rotation Control Panel */}
+      {showRotationControls && (
+        <div className="absolute bottom-16 right-4 z-10 w-80">
+          <RotationControlPanel
+            rotationSpeed={rotationSpeed}
+            rotationAxis={rotationAxis}
+            onRotationSpeedChange={handleRotationSpeedChange}
+            onRotationAxisChange={handleRotationAxisChange}
+            onResetCamera={handleResetCamera}
+            onToggleRotation={handleRotationToggle}
+            isRotating={rotationSpeed > 0}
+          />
+        </div>
+      )}
+
       {/* Main 3D Scene */}
       <OrderbookScene3D
         data={data}
@@ -107,6 +156,9 @@ export default function OrderbookVisualizerPage() {
         autoRotate={settings.autoRotate}
         cameraSettings={cameraSettings}
         theme={settings.theme}
+        rotationSpeed={rotationSpeed}
+        rotationAxis={rotationAxis}
+        cameraReset={cameraReset}
       />
 
       {/* Instructions Overlay */}

@@ -1,0 +1,20 @@
+{
+  "name": "OrderBook 3D Visualizer",
+  "short_name": "OB3D",
+  "description": "Real-time 3D visualization of cryptocurrency order books",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#0f0f23",
+  "theme_color": "#3b82f6",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["finance", "productivity", "business"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}

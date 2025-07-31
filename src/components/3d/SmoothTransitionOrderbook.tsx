@@ -20,6 +20,9 @@ interface SmoothTransitionOrderbookProps {
   showPressureZones?: boolean;
   showHeatmap?: boolean;
   showAxisLabels?: boolean;
+  rotationSpeed?: number;
+  rotationAxis?: 'x' | 'y' | 'z';
+  cameraReset?: number;
 }
 
 interface AnimatedBarData {
@@ -42,7 +45,10 @@ export const SmoothTransitionOrderbook: React.FC<SmoothTransitionOrderbookProps>
   showCumulativeDepth = true,
   showPressureZones = true,
   showHeatmap = true,
-  showAxisLabels = true
+  showAxisLabels = true,
+  rotationSpeed = 0.5,
+  rotationAxis = 'z',
+  cameraReset = 0
 }) => {
   const groupRef = useRef<Group>(null);
   const [animatedBars, setAnimatedBars] = useState<AnimatedBarData[]>([]);
@@ -55,10 +61,34 @@ export const SmoothTransitionOrderbook: React.FC<SmoothTransitionOrderbookProps>
   // Get theme colors for 3D components
   const themeColors = useTheme3D();
   
+  // Handle camera reset
+  useEffect(() => {
+    if (groupRef.current && cameraReset > 0) {
+      // Reset all rotations to initial state
+      groupRef.current.rotation.set(0, 0, 0);
+    }
+  }, [cameraReset]);
+  
   // Auto-rotation that continues smoothly during data updates
   useFrame((state) => {
-    if (groupRef.current && autoRotate && !isTransitioning) {
-      groupRef.current.rotation.z += 0.005; // Smooth rotation around Z-axis (time)
+    if (groupRef.current) {
+      // Only rotate if rotationSpeed > 0 (manual control takes priority over autoRotate)
+      if (rotationSpeed > 0) {
+        const rotationAmount = rotationSpeed * 0.02; // Increased for more visible rotation
+        
+        switch (rotationAxis) {
+          case 'x':
+            groupRef.current.rotation.x += rotationAmount;
+            break;
+          case 'y':
+            groupRef.current.rotation.y += rotationAmount;
+            break;
+          case 'z':
+          default:
+            groupRef.current.rotation.z += rotationAmount; // Default Z-axis for temporal dimension
+            break;
+        }
+      }
     }
     
     // Handle smooth transitions
