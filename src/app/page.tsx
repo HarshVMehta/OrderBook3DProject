@@ -49,8 +49,8 @@ export default function OrderbookVisualizerPage() {
     searchQuery: '',
     showBids: true,
     showAsks: true,
-    showPressureZones: false,
-    showHeatmap: false,
+    showPressureZones: false, // Disabled by default
+    showHeatmap: false, // Disabled by default - only show when checkbox is checked
     showDepthSurface: true,
     autoRotate: false,
     showAxisLabels: false,
@@ -486,7 +486,7 @@ export default function OrderbookVisualizerPage() {
         </Canvas>
       )}
 
-      {/* Enhanced Pressure Heatmap - UI Component (outside Canvas) */}
+      {/* Enhanced Pressure Heatmap - UI Component (outside Canvas) - Only show when enabled */}
       {isStarted && filterSettings.showHeatmap && pressureZoneAnalysis && (filteredData || data) && (
         <div className="absolute top-20 right-4 z-20 w-96 max-h-80">
           <EnhancedPressureHeatmap 

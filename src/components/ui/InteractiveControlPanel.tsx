@@ -312,31 +312,6 @@ const InteractiveControlPanel: React.FC<InteractiveControlPanelProps> = ({
                 </div>
               </div>
 
-              {/* Visualization Mode */}
-              <div className="bg-gray-700 rounded-lg p-3">
-                <label className="text-sm font-medium text-white mb-2 block">Visualization Mode</label>
-                <div className="space-y-2">
-                  {[
-                    { value: 'realtime', label: 'Real-time', icon: '⚡' },
-                    { value: 'historical', label: 'Historical', icon: '📊' },
-                    { value: 'pressure-zones', label: 'Pressure Zones', icon: '🎯' },
-                    { value: 'heatmap', label: 'Heatmap', icon: '🔥' },
-                    { value: 'depth', label: 'Depth Chart', icon: '📈' }
-                  ].map(mode => (
-                    <label key={mode.value} className="flex items-center space-x-2 text-sm">
-                      <input
-                        type="radio"
-                        name="visualizationMode"
-                        checked={settings.visualizationMode === mode.value}
-                        onChange={() => handleVisualizationModeChange(mode.value as any)}
-                        className="rounded"
-                      />
-                      <span className="text-gray-300">{mode.icon} {mode.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
               {/* Display Options */}
               <div className="bg-gray-700 rounded-lg p-3">
                 <label className="text-sm font-medium text-white mb-2 block">Display Options</label>
@@ -394,22 +369,6 @@ const InteractiveControlPanel: React.FC<InteractiveControlPanelProps> = ({
                       className="rounded"
                     />
                     <span className="text-gray-300">Statistics</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Animation Controls */}
-              <div className="bg-gray-700 rounded-lg p-3">
-                <label className="text-sm font-medium text-white mb-2 block">Animation</label>
-                <div className="space-y-2">
-                  <label className="flex items-center space-x-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={settings.autoRotate}
-                      onChange={(e) => updateSettings({ autoRotate: e.target.checked })}
-                      className="rounded"
-                    />
-                    <span className="text-gray-300">Auto Rotate</span>
                   </label>
                 </div>
               </div>
@@ -513,56 +472,6 @@ const InteractiveControlPanel: React.FC<InteractiveControlPanelProps> = ({
                 >
                   Reset All Filters
                 </button>
-              </div>
-
-              {/* Export Settings */}
-              <div className="bg-gray-700 rounded-lg p-3">
-                <button
-                  onClick={() => {
-                    const settingsJson = JSON.stringify(settings, null, 2);
-                    const blob = new Blob([settingsJson], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'orderbook-settings.json';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }}
-                  className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors"
-                >
-                  Export Settings
-                </button>
-              </div>
-
-              {/* Import Settings */}
-              <div className="bg-gray-700 rounded-lg p-3">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        try {
-                          const importedSettings = JSON.parse(event.target?.result as string);
-                          updateSettings(importedSettings);
-                        } catch (error) {
-                          console.error('Failed to import settings:', error);
-                        }
-                      };
-                      reader.readAsText(file);
-                    }
-                  }}
-                  className="hidden"
-                  id="import-settings"
-                />
-                <label
-                  htmlFor="import-settings"
-                  className="w-full px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded transition-colors cursor-pointer block text-center"
-                >
-                  Import Settings
-                </label>
               </div>
             </div>
           )}

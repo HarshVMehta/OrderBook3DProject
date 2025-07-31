@@ -119,11 +119,11 @@ export const SmoothTransitionOrderbook: React.FC<SmoothTransitionOrderbookProps>
     
     const newAnimatedBars: AnimatedBarData[] = [];
     
-    // Process bids
+    // Process bids (negative Z for front positioning)
     data.bids.forEach((bid, index) => {
       const x = normalizePrice(bid.price, data.priceRange);
       const y = normalizeQuantity(bid.quantity, data.maxQuantity) / 2;
-      const z = (index / data.bids.length) * timeDepth - timeDepth / 2;
+      const z = -timeDepth / 4 + (index / data.bids.length) * (timeDepth / 2); // Front half
       
       const targetPosition = new Vector3(x, y, z);
       
@@ -142,12 +142,11 @@ export const SmoothTransitionOrderbook: React.FC<SmoothTransitionOrderbookProps>
       });
     });
     
-    // Process asks
+    // Process asks (positive Z for back positioning)
     data.asks.forEach((ask, index) => {
       const x = normalizePrice(ask.price, data.priceRange);
       const y = normalizeQuantity(ask.quantity, data.maxQuantity) / 2;
-      const z = (index / data.asks.length) * timeDepth - timeDepth / 2;
-      
+      const z = timeDepth / 4 + (index / data.asks.length) * (timeDepth / 2); // Back half
       const targetPosition = new Vector3(x, y, z);
       
       // Check if this bar existed in previous data
@@ -302,7 +301,7 @@ export const SmoothTransitionOrderbook: React.FC<SmoothTransitionOrderbookProps>
             color={themeColors.text}
             anchorX="center"
             anchorY="middle"
-            rotation={[0, -Math.PI / 2, 0]}
+            rotation={[0, 0, 0]}
           >
             Time / Depth
           </Text>
@@ -346,15 +345,15 @@ export const SmoothTransitionOrderbook: React.FC<SmoothTransitionOrderbookProps>
         />
       )}
       
-      {/* Pressure Heatmap Overlay */}
+      {/* Pressure Heatmap Overlay - Enhanced for better visibility */}
       {showHeatmap && pressureZones.length > 0 && (
         <PressureHeatmap
           pressureZones={pressureZones}
           maxPrice={priceRange.max}
           minPrice={priceRange.min}
-          width={24}
-          height={24}
-          opacity={0.4}
+          width={22} // Slightly larger for better coverage
+          height={22}
+          opacity={0.7} // More visible
           animate={!isTransitioning}
         />
       )}

@@ -27,42 +27,43 @@ const ExportControlPanel: React.FC<ExportControlPanelProps> = ({
   const exportService = OrderbookExportService.getInstance();
 
   const handleExportSnapshot = async () => {
-    if (!data) {
-      setExportStatus('No data available for export');
-      return;
-    }
-
     try {
-      setExportStatus('Preparing export...');
+      setExportStatus('Finding 3D visualization...');
       
-      const snapshot = exportService.createSnapshot(
-        data,
-        symbol,
-        includePressureZones ? pressureZoneAnalysis || undefined : undefined
-      );
-
-      switch (exportFormat) {
-        case 'json':
-          exportService.exportAsJSON(snapshot);
-          break;
-        case 'csv':
-          exportService.exportAsCSV(data);
-          break;
-        case 'txt':
-          if (pressureZoneAnalysis) {
-            const report = exportService.generateAnalysisReport(data, pressureZoneAnalysis, symbol);
-            exportService.exportAnalysisReportAsText(report);
-          } else {
-            setExportStatus('Analysis report requires pressure zone data');
-            return;
-          }
-          break;
+      // Find the Three.js canvas element
+      const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+      
+      if (!canvas) {
+        setExportStatus('No 3D visualization found to capture');
+        setTimeout(() => setExportStatus(''), 3000);
+        return;
       }
 
-      setExportStatus(`Successfully exported ${exportFormat.toUpperCase()} file`);
+      // Check if canvas has any content
+      const ctx = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if (!ctx) {
+        setExportStatus('WebGL context not available');
+        setTimeout(() => setExportStatus(''), 3000);
+        return;
+      }
+
+      setExportStatus('Preparing for screenshot capture...');
+      
+      // Wait a moment to ensure the scene is fully rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setExportStatus('Capturing screenshot...');
+
+      // Use the basic screenshot method for better compatibility
+      await exportService.exportScreenshot(canvas, 
+        `orderbook-${symbol}-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+      );
+
+      setExportStatus('Screenshot captured successfully! 📸');
       setTimeout(() => setExportStatus(''), 3000);
     } catch (error) {
-      setExportStatus(`Export failed: ${error}`);
+      console.error('Screenshot capture failed:', error);
+      setExportStatus(`Screenshot failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setTimeout(() => setExportStatus(''), 5000);
     }
   };

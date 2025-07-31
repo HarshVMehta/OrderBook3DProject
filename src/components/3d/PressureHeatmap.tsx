@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Mesh, PlaneGeometry, ShaderMaterial, Color, Vector2, DataTexture } from 'three';
+import { Mesh, PlaneGeometry, ShaderMaterial, Color, Vector2, DataTexture, FloatType } from 'three';
 import { PressureZone } from '@/types/orderbook';
 
 interface PressureHeatmapProps {
@@ -22,23 +22,42 @@ const PressureHeatmap: React.FC<PressureHeatmapProps> = ({
   minPrice,
   width = 20,
   height = 20,
-  opacity = 0.6,
+  opacity = 0.8,
   animate = true,
   heatmapData
 }) => {
   const meshRef = useRef<Mesh>(null);
   const materialRef = useRef<ShaderMaterial>(null);
 
-  // Create enhanced heatmap data texture
+  // Early return if no pressure zones data - don't render anything
+  if (!pressureZones || pressureZones.length === 0) {
+    return null;
+  }
+
+  // Validate price range to prevent NaN in calculations
+  const validMaxPrice = isFinite(maxPrice) && maxPrice > 0 ? maxPrice : 100000;
+  const validMinPrice = isFinite(minPrice) && minPrice >= 0 ? minPrice : 0;
+  
+  // Ensure we have a valid price range
+  if (validMaxPrice <= validMinPrice) {
+    console.warn('Invalid price range for heatmap, skipping render');
+    return null;
+  }
+
+  // Create enhanced heatmap data texture with better visibility
   const heatmapDataTexture = useMemo(() => {
-    const resolution = 256; // Higher resolution for better quality
+    const resolution = 512; // Even higher resolution for crystal clear heatmap
     const data = new Float32Array(resolution * resolution * 4);
     
     // Generate heatmap based on pressure zones and volume data
     for (let y = 0; y < resolution; y++) {
       for (let x = 0; x < resolution; x++) {
-        const price = minPrice + ((maxPrice - minPrice) * x / resolution);
+        const price = validMinPrice + ((validMaxPrice - validMinPrice) * x / resolution);
         const depth = y / resolution; // Normalized depth
+        
+        // Validate calculated values
+        if (!isFinite(price) || price < 0) continue;
+        if (!isFinite(depth) || depth < 0 || depth > 1) continue;
         
         let intensity = 0;
         let volumeIntensity = 0;
@@ -46,64 +65,87 @@ const PressureHeatmap: React.FC<PressureHeatmapProps> = ({
         
         // Calculate intensity from nearby pressure zones with enhanced falloff
         for (const zone of pressureZones) {
+          // Validate zone data
+          if (!zone || !isFinite(zone.minPrice) || !isFinite(zone.maxPrice) || !isFinite(zone.centerPrice) || !isFinite(zone.intensity)) {
+            continue;
+          }
+          
           if (price >= zone.minPrice && price <= zone.maxPrice) {
             const distanceFromCenter = Math.abs(price - zone.centerPrice);
             const maxDistance = (zone.maxPrice - zone.minPrice) / 2;
-            const distanceFactor = Math.max(0, 1 - Math.pow(distanceFromCenter / maxDistance, 2));
-            const zoneIntensity = zone.intensity * distanceFactor;
+            
+            // Prevent division by zero or invalid calculations
+            if (maxDistance <= 0 || !isFinite(distanceFromCenter)) continue;
+            
+            const distanceFactor = Math.max(0, 1 - Math.pow(distanceFromCenter / maxDistance, 1.5));
+            const zoneIntensity = zone.intensity * distanceFactor * 2; // Doubled intensity for better visibility
+            
+            // Validate intensity before using
+            if (!isFinite(zoneIntensity) || zoneIntensity < 0) continue;
             
             intensity = Math.max(intensity, zoneIntensity);
             
-            // Enhanced color mixing based on zone type and intensity
+            // Enhanced color mixing based on zone type and intensity with stronger colors
             switch (zone.pressureType) {
               case 'support':
-                colorG += zoneIntensity * 0.8; // Green
-                colorB += zoneIntensity * 0.2; // Slight blue tint
+                colorG += zoneIntensity * 1.2; // Brighter green
+                colorB += zoneIntensity * 0.3; // Slight blue tint
                 break;
               case 'resistance':
-                colorR += zoneIntensity * 0.8; // Red
-                colorG += zoneIntensity * 0.1; // Slight green tint
+                colorR += zoneIntensity * 1.2; // Brighter red
+                colorG += zoneIntensity * 0.2; // Slight green tint
                 break;
               case 'accumulation':
-                colorB += zoneIntensity * 0.9; // Blue
-                colorG += zoneIntensity * 0.3; // Slight green tint
+                colorB += zoneIntensity * 1.2; // Brighter blue
+                colorG += zoneIntensity * 0.4; // More green tint
                 break;
               case 'distribution':
-                colorR += zoneIntensity * 0.6; // Purple
-                colorB += zoneIntensity * 0.8;
+                colorR += zoneIntensity * 0.8; // Purple-ish
+                colorB += zoneIntensity * 1.0;
+                colorG += zoneIntensity * 0.2;
                 break;
             }
           }
         }
         
         // Add volume-based intensity if heatmap data is available
-        if (heatmapData) {
-          const volumeData = heatmapData.find(d => Math.abs(d.price - price) < (maxPrice - minPrice) / resolution);
-          if (volumeData) {
-            volumeIntensity = volumeData.volume / 1000; // Normalize volume
-            intensity = Math.max(intensity, volumeIntensity * 0.3);
+        if (heatmapData && Array.isArray(heatmapData)) {
+          const volumeData = heatmapData.find(d => d && isFinite(d.price) && Math.abs(d.price - price) < (validMaxPrice - validMinPrice) / resolution);
+          if (volumeData && isFinite(volumeData.volume) && volumeData.volume > 0) {
+            volumeIntensity = volumeData.volume / 500; // Increased sensitivity
+            if (isFinite(volumeIntensity)) {
+              intensity = Math.max(intensity, volumeIntensity * 0.5);
+            }
           }
         }
         
-        // Add gradient effect based on depth
-        const depthFactor = Math.sin(depth * Math.PI) * 0.2;
-        intensity += depthFactor;
+        // Add gradient effect based on depth with more variation
+        const depthFactor = Math.sin(depth * Math.PI * 2) * 0.3;
+        if (isFinite(depthFactor)) {
+          intensity += depthFactor;
+        }
         
+        // Ensure minimum visibility for active areas
+        if (intensity > 0.1) {
+          intensity = Math.max(intensity, 0.3);
+        }
+        
+        // Final validation before data assignment
         const index = (y * resolution + x) * 4;
-        data[index] = Math.min(colorR, 1);     // R
-        data[index + 1] = Math.min(colorG, 1); // G
-        data[index + 2] = Math.min(colorB, 1); // B
-        data[index + 3] = Math.min(intensity, 1); // A
+        data[index] = isFinite(colorR) ? Math.min(Math.max(colorR, 0), 1) : 0;     // R
+        data[index + 1] = isFinite(colorG) ? Math.min(Math.max(colorG, 0), 1) : 0; // G
+        data[index + 2] = isFinite(colorB) ? Math.min(Math.max(colorB, 0), 1) : 0; // B
+        data[index + 3] = isFinite(intensity) ? Math.min(Math.max(intensity, 0), 1) : 0; // A
       }
     }
     
     const texture = new DataTexture(data, resolution, resolution);
     texture.format = 1023; // RGBAFormat
-    texture.type = 5126; // FloatType
+    texture.type = FloatType; // Use proper FloatType constant
     texture.needsUpdate = true;
     
     return { texture, resolution };
-  }, [pressureZones, maxPrice, minPrice, heatmapData]);
+  }, [pressureZones, validMaxPrice, validMinPrice, heatmapData]);
 
   // Enhanced custom shader for advanced heatmap rendering
   const shaderMaterial = useMemo(() => {
@@ -144,34 +186,34 @@ const PressureHeatmap: React.FC<PressureHeatmapProps> = ({
           return t * t * (3.0 - 2.0 * t);
         }
         
-        // Generate procedural pressure zones
+        // Generate procedural pressure zones only if we have real pressure zone data
         vec4 generatePressureZones(vec2 uv) {
           vec4 color = vec4(0.0);
           
-          // Create multiple pressure zones procedurally
-          for (int i = 0; i < 5; i++) {
-            float angle = float(i) * 2.0 * 3.14159 / 5.0;
-            vec2 center = vec2(0.5 + 0.3 * cos(angle), 0.5 + 0.3 * sin(angle));
-            float dist = length(uv - center);
-            float radius = 0.1 + 0.05 * sin(time + float(i));
-            float intensity = 1.0 - smoothstep3(0.0, radius, dist);
-            
-            // Different colors for different zone types
-            if (i == 0) {
-              color.r += intensity * 0.8; // Support (red)
-            } else if (i == 1) {
-              color.g += intensity * 0.8; // Resistance (green)
-            } else if (i == 2) {
-              color.b += intensity * 0.8; // Accumulation (blue)
-            } else if (i == 3) {
-              color.r += intensity * 0.6; // Distribution (purple)
-              color.b += intensity * 0.6;
-            } else {
-              color.g += intensity * 0.6; // Mixed (yellow)
-              color.r += intensity * 0.4;
+          // Only generate if we have actual pressure zones (not just procedural)
+          if (pressureZones > 0) {
+            // Create pressure zones based on actual data
+            for (int i = 0; i < min(pressureZones, 5); i++) {
+              float angle = float(i) * 2.0 * 3.14159 / float(pressureZones);
+              vec2 center = vec2(0.5 + 0.2 * cos(angle), 0.5 + 0.2 * sin(angle));
+              float dist = length(uv - center);
+              float radius = 0.08 + 0.02 * sin(time + float(i));
+              float intensity = (1.0 - smoothstep3(0.0, radius, dist)) * (0.5 + 0.3 * sin(time * 0.5 + float(i)));
+              
+              // Different colors for different zone types
+              if (i == 0) {
+                color.r += intensity * 0.6; // Support (red)
+              } else if (i == 1) {
+                color.g += intensity * 0.6; // Resistance (green)
+              } else if (i == 2) {
+                color.b += intensity * 0.6; // Accumulation (blue)
+              } else {
+                color.r += intensity * 0.4; // Mixed zones
+                color.b += intensity * 0.4;
+              }
+              
+              color.a += intensity * 0.15;
             }
-            
-            color.a += intensity * 0.2;
           }
           
           return color;
@@ -198,25 +240,33 @@ const PressureHeatmap: React.FC<PressureHeatmapProps> = ({
           // Sample heatmap texture
           vec4 heatmapColor = texture2D(heatmapTexture, vUv);
           
-          // Generate procedural pressure zones
-          vec4 proceduralColor = generatePressureZones(vUv);
+          // Only generate procedural zones if we have real pressure zone data
+          vec4 proceduralColor = vec4(0.0);
+          if (pressureZones > 0) {
+            proceduralColor = generatePressureZones(vUv);
+          }
           
-          // Blend heatmap and procedural data
-          vec4 finalColor = mix(heatmapColor, proceduralColor, 0.3);
+          // Blend heatmap and procedural data - prioritize real heatmap data
+          vec4 finalColor = mix(proceduralColor, heatmapColor, 0.8);
           
-          // Add animations
-          finalColor = addAnimations(finalColor, vUv);
+          // Add animations only if we have visible content
+          if (finalColor.a > 0.01) {
+            finalColor = addAnimations(finalColor, vUv);
+          }
           
           // Apply intensity-based alpha
           finalColor.a *= opacity;
           
-          // Add gradient effect from center
-          float centerDist = length(vUv - vec2(0.5));
-          finalColor.a *= (1.0 - centerDist * 0.3);
-          
-          // Add edge glow effect
-          float edgeGlow = 1.0 - smoothstep3(0.8, 1.0, centerDist);
-          finalColor.rgb += edgeGlow * 0.2;
+          // Only apply effects if we have sufficient alpha
+          if (finalColor.a > 0.05) {
+            // Add gradient effect from center
+            float centerDist = length(vUv - vec2(0.5));
+            finalColor.a *= (1.0 - centerDist * 0.2);
+            
+            // Add subtle edge glow effect
+            float edgeGlow = 1.0 - smoothstep3(0.9, 1.0, centerDist);
+            finalColor.rgb += edgeGlow * 0.1;
+          }
           
           gl_FragColor = finalColor;
         }
@@ -233,13 +283,13 @@ const PressureHeatmap: React.FC<PressureHeatmapProps> = ({
 
   return (
     <group>
-      {/* Main heatmap overlay */}
+      {/* Main heatmap overlay positioned above the orderbook surface */}
       <mesh
         ref={meshRef}
-        position={[0, 0.01, 0]}
+        position={[0, 0.1, 0]} // Slightly higher to avoid z-fighting
         rotation={[-Math.PI / 2, 0, 0]}
       >
-        <planeGeometry args={[width, height]} />
+        <planeGeometry args={[width, height, 32, 32]} /> {/* Higher subdivisions for better quality */}
         <shaderMaterial
           ref={materialRef}
           attach="material"
@@ -247,76 +297,131 @@ const PressureHeatmap: React.FC<PressureHeatmapProps> = ({
         />
       </mesh>
 
-      {/* Enhanced grid lines for reference */}
-      <group position={[0, 0.02, 0]}>
+      {/* Secondary heatmap layer for depth effect */}
+      <mesh
+        position={[0, 0.05, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+      >
+        <planeGeometry args={[width * 1.02, height * 1.02]} />
+        <shaderMaterial
+          attach="material"
+          {...shaderMaterial}
+          uniforms={{
+            ...shaderMaterial.uniforms,
+            opacity: { value: opacity * 0.3 } // Dimmer background layer
+          }}
+        />
+      </mesh>
+
+      {/* Enhanced grid lines for reference with better visibility */}
+      <group position={[0, 0.12, 0]}>
         {/* Vertical grid lines with pressure zone indicators */}
-        {Array.from({ length: 11 }, (_, i) => {
-          const price = minPrice + ((maxPrice - minPrice) * i / 10);
+        {Array.from({ length: 21 }, (_, i) => { // More grid lines for better reference
+          const price = validMinPrice + ((validMaxPrice - validMinPrice) * i / 20);
+          const position = width * (i / 20 - 0.5);
+          
+          // Validate calculated values
+          if (!isFinite(price) || !isFinite(position)) {
+            return null;
+          }
+          
           const intensity = pressureZones.reduce((max, zone) => {
-            if (price >= zone.minPrice && price <= zone.maxPrice) {
+            if (zone && 
+                isFinite(zone.minPrice) && 
+                isFinite(zone.maxPrice) && 
+                isFinite(zone.intensity) &&
+                price >= zone.minPrice && 
+                price <= zone.maxPrice) {
               return Math.max(max, zone.intensity);
             }
             return max;
           }, 0);
           
           return (
-            <mesh key={`v-${i}`} position={[width * (i / 10 - 0.5), 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[0.05, height]} />
+            <mesh key={`v-${i}`} position={[position, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[0.03, height]} />
               <meshBasicMaterial 
-                color={intensity > 0.5 ? "#ff6b6b" : intensity > 0.2 ? "#ffd93d" : "#333333"} 
+                color={intensity > 0.7 ? "#ff1744" : intensity > 0.4 ? "#ff9800" : intensity > 0.2 ? "#ffeb3b" : "#424242"} 
                 transparent 
-                opacity={0.3 + intensity * 0.4} 
+                opacity={Math.max(0.4, Math.min(1.0, 0.4 + intensity * 0.6))} 
               />
             </mesh>
           );
-        })}
+        }).filter(Boolean)}
         
-        {/* Horizontal grid lines */}
-        {Array.from({ length: 11 }, (_, i) => (
-          <mesh key={`h-${i}`} position={[0, 0, height * (i / 10 - 0.5)]} rotation={[-Math.PI / 2, 0, 0]}>
-            <planeGeometry args={[width, 0.05]} />
-            <meshBasicMaterial color="#333333" transparent opacity={0.3} />
-          </mesh>
-        ))}
+        {/* Horizontal grid lines with enhanced styling */}
+        {Array.from({ length: 21 }, (_, i) => {
+          const position = height * (i / 20 - 0.5);
+          
+          // Validate position
+          if (!isFinite(position)) {
+            return null;
+          }
+          
+          return (
+            <mesh key={`h-${i}`} position={[0, 0, position]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[width, 0.03]} />
+              <meshBasicMaterial color="#616161" transparent opacity={0.4} />
+            </mesh>
+          );
+        }).filter(Boolean)}
       </group>
 
       {/* Enhanced pressure zone indicators */}
-      {pressureZones.map((zone) => {
-        const normalizedX = ((zone.centerPrice - minPrice) / (maxPrice - minPrice)) * width - width / 2;
+      {pressureZones.filter(zone => {
+        // Filter out zones with invalid data that could cause NaN
+        return zone && 
+               isFinite(zone.centerPrice) && 
+               isFinite(zone.intensity) && 
+               isFinite(zone.volume) && 
+               zone.intensity > 0 &&
+               zone.centerPrice >= validMinPrice && 
+               zone.centerPrice <= validMaxPrice;
+      }).map((zone) => {
+        const normalizedX = ((zone.centerPrice - validMinPrice) / (validMaxPrice - validMinPrice)) * width - width / 2;
         const side = zone.side === 'bid' ? -height / 4 : height / 4;
         const zoneColor = 
           zone.pressureType === 'support' ? '#22c55e' :
           zone.pressureType === 'resistance' ? '#ef4444' :
           zone.pressureType === 'accumulation' ? '#3b82f6' : '#a855f7';
         
+        // Validate calculated position
+        if (!isFinite(normalizedX) || !isFinite(side)) {
+          return null;
+        }
+        
         return (
           <group key={zone.id} position={[normalizedX, 0.03, side]}>
             {/* Zone marker with enhanced styling */}
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <circleGeometry args={[zone.intensity * 2, 16]} />
+              <circleGeometry args={[Math.max(0.1, zone.intensity * 2), 16]} />
               <meshBasicMaterial
                 color={zoneColor}
                 transparent
-                opacity={0.6 + zone.intensity * 0.2}
+                opacity={Math.max(0.1, Math.min(1.0, 0.6 + zone.intensity * 0.2))}
               />
             </mesh>
             
             {/* Intensity pulse rings */}
-            {[0.5, 0.8, 1.2, 1.6].map((radius, ringIndex) => (
-              <mesh key={ringIndex} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[zone.intensity * radius, zone.intensity * (radius + 0.3), 16]} />
-                <meshBasicMaterial
-                  color={zoneColor}
-                  transparent
-                  opacity={zone.intensity * 0.2 * (1 - ringIndex * 0.2)}
-                />
-              </mesh>
-            ))}
+            {[0.5, 0.8, 1.2, 1.6].map((radius, ringIndex) => {
+              const innerRadius = Math.max(0.05, zone.intensity * radius);
+              const outerRadius = Math.max(0.1, zone.intensity * (radius + 0.3));
+              return (
+                <mesh key={ringIndex} rotation={[-Math.PI / 2, 0, 0]}>
+                  <ringGeometry args={[innerRadius, outerRadius, 16]} />
+                  <meshBasicMaterial
+                    color={zoneColor}
+                    transparent
+                    opacity={Math.max(0.05, Math.min(1.0, zone.intensity * 0.2 * (1 - ringIndex * 0.2)))}
+                  />
+                </mesh>
+              );
+            })}
             
             {/* Volume indicator for high-volume zones */}
             {zone.volume > 500 && (
               <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-                <ringGeometry args={[zone.intensity * 3, zone.intensity * 3.5, 8]} />
+                <ringGeometry args={[Math.max(0.1, zone.intensity * 3), Math.max(0.15, zone.intensity * 3.5), 8]} />
                 <meshBasicMaterial
                   color="#fbbf24"
                   transparent
@@ -326,26 +431,38 @@ const PressureHeatmap: React.FC<PressureHeatmapProps> = ({
             )}
           </group>
         );
-      })}
+      }).filter(Boolean)}
 
       {/* Volume intensity overlay */}
-      {heatmapData && (
+      {heatmapData && Array.isArray(heatmapData) && (
         <group position={[0, 0.04, 0]}>
-          {heatmapData.filter(d => d.volume > 100).map((data, index) => {
-            const normalizedX = ((data.price - minPrice) / (maxPrice - minPrice)) * width - width / 2;
+          {heatmapData.filter(d => 
+            d && 
+            isFinite(d.volume) && 
+            isFinite(d.price) && 
+            d.volume > 100 &&
+            d.price >= validMinPrice && 
+            d.price <= validMaxPrice
+          ).map((data, index) => {
+            const normalizedX = ((data.price - validMinPrice) / (validMaxPrice - validMinPrice)) * width - width / 2;
             const volumeIntensity = Math.min(data.volume / 1000, 1);
+            
+            // Validate calculated values
+            if (!isFinite(normalizedX) || !isFinite(volumeIntensity) || volumeIntensity <= 0) {
+              return null;
+            }
             
             return (
               <mesh key={`vol-${index}`} position={[normalizedX, 0, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <circleGeometry args={[volumeIntensity * 1.5, 8]} />
+                <circleGeometry args={[Math.max(0.1, volumeIntensity * 1.5), 8]} />
                 <meshBasicMaterial
                   color="#f59e0b"
                   transparent
-                  opacity={volumeIntensity * 0.3}
+                  opacity={Math.max(0.1, Math.min(1.0, volumeIntensity * 0.3))}
                 />
               </mesh>
             );
-          })}
+          }).filter(Boolean)}
         </group>
       )}
     </group>
