@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+:root {
+  /* Light theme colors */
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #171717;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #171717;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #2563eb;
+  
+  /* OrderBook specific colors */
+  --orderbook-bid: #059669;
+  --orderbook-ask: #dc2626;
+  --orderbook-surface: #f9fafb;
+  --orderbook-grid: #e5e7eb;
+  --orderbook-pressure-high: #ef4444;
+  --orderbook-pressure-medium: #f59e0b;
+  --orderbook-pressure-low: #10b981;
+  
+  /* Transitions */
+  --theme-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --card: #1a1a1a;
+  --card-foreground: #ededed;
+  --popover: #1a1a1a;
+  --popover-foreground: #ededed;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #374151;
+  --secondary-foreground: #ededed;
+  --muted: #374151;
+  --muted-foreground: #9ca3af;
+  --accent: #374151;
+  --accent-foreground: #ededed;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #374151;
+  --input: #374151;
+  --ring: #3b82f6;
+  
+  /* OrderBook specific colors for dark theme */
+  --orderbook-bid: #10b981;
+  --orderbook-ask: #ef4444;
+  --orderbook-surface: #1f2937;
+  --orderbook-grid: #374151;
+  --orderbook-pressure-high: #f87171;
+  --orderbook-pressure-medium: #fbbf24;
+  --orderbook-pressure-low: #34d399;
+}
+
+* {
+  border-color: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  transition: var(--theme-transition);
+}
+
+/* Smooth transitions for theme changes */
+*, *::before, *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted-foreground);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-foreground);
+}
+
+/* Focus indicators */
+*:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
