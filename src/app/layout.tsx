@@ -16,17 +16,18 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "OrderBook 3D Visualizer",
   description: "Real-time 3D visualization of cryptocurrency order books with responsive design",
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+  manifest: "/manifest.json"
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "white" },
     { media: "(prefers-color-scheme: dark)", color: "#0f0f23" }
   ],
-  manifest: "/manifest.json"
 };
 
 export default function RootLayout({
@@ -38,6 +39,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <ThemeProvider defaultTheme="system">
           {children}

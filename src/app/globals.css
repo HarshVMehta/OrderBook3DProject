@@ -35,7 +35,11 @@
   --theme-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dark {
+/* Dark theme overrides */
+.dark,
+html.dark,
+body.dark,
+[data-theme="dark"] {
   --background: #0a0a0a;
   --foreground: #ededed;
   --card: #1a1a1a;
@@ -64,6 +68,41 @@
   --orderbook-pressure-high: #f87171;
   --orderbook-pressure-medium: #fbbf24;
   --orderbook-pressure-low: #34d399;
+}
+
+/* Light theme overrides */
+.light,
+html.light,
+body.light,
+[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #171717;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #f3f4f6;
+  --accent-foreground: #171717;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --ring: #2563eb;
+  
+  /* OrderBook specific colors */
+  --orderbook-bid: #059669;
+  --orderbook-ask: #dc2626;
+  --orderbook-surface: #f9fafb;
+  --orderbook-grid: #e5e7eb;
+  --orderbook-pressure-high: #ef4444;
+  --orderbook-pressure-medium: #f59e0b;
+  --orderbook-pressure-low: #10b981;
 }
 
 * {

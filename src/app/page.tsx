@@ -324,14 +324,26 @@ export default function OrderbookVisualizerPage() {
           </button>
         )}
         <button
-          onClick={() => setShowRotationControls(!showRotationControls)}
+          onClick={() => {
+            setShowRotationControls(!showRotationControls);
+            // Close export panel when opening rotation controls
+            if (!showRotationControls) {
+              setShowExportPanel(false);
+            }
+          }}
           className="bg-card hover:bg-accent text-foreground px-3 py-2 rounded-lg text-sm transition-colors border border-border"
         >
           🔄 {isMounted && deviceInfo.type === 'mobile' ? '' : 'Rotation'}
         </button>
         {(!isMounted || !uiLayout.compactMode) && (
           <button
-            onClick={() => setShowExportPanel(!showExportPanel)}
+            onClick={() => {
+              setShowExportPanel(!showExportPanel);
+              // Close rotation controls when opening export panel
+              if (!showExportPanel) {
+                setShowRotationControls(false);
+              }
+            }}
             className="bg-card hover:bg-accent text-foreground px-3 py-2 rounded-lg text-sm transition-colors border border-border"
           >
             📥 {isMounted && deviceInfo.type === 'mobile' ? '' : 'Export'}
@@ -343,6 +355,7 @@ export default function OrderbookVisualizerPage() {
         >
           {showControlPanel ? 'Hide Controls' : 'Controls'}
         </button>
+        {/* Theme Toggle Button removed as requested */}
         {isMounted && deviceInfo.type === 'mobile' && supportsFullscreen() && (
           <button
             onClick={toggleFullscreen}
@@ -357,8 +370,8 @@ export default function OrderbookVisualizerPage() {
       {showControlPanel && (
         <div className={`absolute z-10 max-h-96 overflow-y-auto ${
           isMounted && deviceInfo.type === 'mobile' 
-            ? 'top-24 left-4 right-4' 
-            : 'top-20 right-4 w-80'
+            ? 'top-32 left-4 right-4' 
+            : 'top-24 right-4 w-80'
         }`}>
           <InteractiveControlPanel
             settings={filterSettings}

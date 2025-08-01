@@ -34,6 +34,7 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(defaultTheme);
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('dark');
+  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Get system preference
   const getSystemTheme = (): 'light' | 'dark' => {
@@ -53,9 +54,25 @@ export function ThemeProvider({
   const applyTheme = (themeToApply: 'light' | 'dark') => {
     if (typeof document === 'undefined') return;
     
+    console.log('applyTheme called with:', themeToApply);
     const root = document.documentElement;
+    const body = document.body;
+    
+    // Remove all theme classes
     root.classList.remove('light', 'dark');
+    body.classList.remove('light', 'dark');
+    
+    // Add the new theme class to both html and body
     root.classList.add(themeToApply);
+    body.classList.add(themeToApply);
+    
+    // Set data attribute for additional CSS targeting
+    root.setAttribute('data-theme', themeToApply);
+    body.setAttribute('data-theme', themeToApply);
+    
+    console.log('Applied class to root:', themeToApply);
+    console.log('Root classes:', root.className);
+    console.log('Body classes:', body.className);
     
     // Update CSS custom properties for the theme
     if (themeToApply === 'dark') {
@@ -110,10 +127,18 @@ export function ThemeProvider({
   };
 
   const setTheme = (newTheme: Theme) => {
+    console.log('setTheme called with:', newTheme);
     setThemeState(newTheme);
+    setForceUpdate(prev => prev + 1); // Force re-render
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(storageKey, newTheme);
+        console.log('Theme saved to localStorage:', newTheme);
+        
+        // Force immediate theme application
+        const resolved = getResolvedTheme(newTheme);
+        applyTheme(resolved);
+        setResolvedTheme(resolved);
       } catch (e) {
         // Handle localStorage errors silently
         console.warn('Failed to save theme preference:', e);
@@ -122,8 +147,12 @@ export function ThemeProvider({
   };
 
   const toggleTheme = () => {
+    console.log('toggleTheme called');
     const currentResolved = getResolvedTheme(theme);
-    setTheme(currentResolved === 'dark' ? 'light' : 'dark');
+    console.log('Current resolved theme in toggle:', currentResolved);
+    const newTheme = currentResolved === 'dark' ? 'light' : 'dark';
+    console.log('Setting new theme to:', newTheme);
+    setTheme(newTheme);
   };
 
   // Initialize theme from localStorage

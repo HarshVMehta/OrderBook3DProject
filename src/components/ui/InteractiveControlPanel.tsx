@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { SimpleThemeToggle } from './ThemeToggle';
 
 export interface FilterSettings {
   priceRange: {
@@ -437,13 +436,7 @@ const InteractiveControlPanel: React.FC<InteractiveControlPanelProps> = ({
           {activeTab === 'advanced' && (
             <div className="space-y-4">
               {/* Theme Controls */}
-              <div className="bg-gray-700 rounded-lg p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-white">Theme</label>
-                  <SimpleThemeToggle />
-                </div>
-                <p className="text-xs text-gray-400">Toggle between light and dark modes</p>
-              </div>
+              {/* Theme toggle section removed as requested */}
 
               {/* Current Price Display */}
               {currentPrice && (
