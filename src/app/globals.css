@@ -35,39 +35,216 @@
   --theme-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark theme overrides */
-.dark,
+/* Force dark theme as default */
+html,
+body,
 html.dark,
 body.dark,
+.dark,
 [data-theme="dark"] {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --card: #1a1a1a;
-  --card-foreground: #ededed;
-  --popover: #1a1a1a;
-  --popover-foreground: #ededed;
-  --primary: #3b82f6;
-  --primary-foreground: #ffffff;
-  --secondary: #374151;
-  --secondary-foreground: #ededed;
-  --muted: #374151;
-  --muted-foreground: #9ca3af;
-  --accent: #374151;
-  --accent-foreground: #ededed;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #374151;
-  --input: #374151;
-  --ring: #3b82f6;
+  --background: #0a0a0a !important;
+  --foreground: #ededed !important;
+  --card: #1a1a1a !important;
+  --card-foreground: #ededed !important;
+  --popover: #1a1a1a !important;
+  --popover-foreground: #ededed !important;
+  --primary: #3b82f6 !important;
+  --primary-foreground: #ffffff !important;
+  --secondary: #374151 !important;
+  --secondary-foreground: #ededed !important;
+  --muted: #374151 !important;
+  --muted-foreground: #9ca3af !important;
+  --accent: #374151 !important;
+  --accent-foreground: #ededed !important;
+  --destructive: #ef4444 !important;
+  --destructive-foreground: #ffffff !important;
+  --border: #374151 !important;
+  --input: #374151 !important;
+  --ring: #3b82f6 !important;
   
   /* OrderBook specific colors for dark theme */
-  --orderbook-bid: #10b981;
-  --orderbook-ask: #ef4444;
-  --orderbook-surface: #1f2937;
-  --orderbook-grid: #374151;
-  --orderbook-pressure-high: #f87171;
-  --orderbook-pressure-medium: #fbbf24;
-  --orderbook-pressure-low: #34d399;
+  --orderbook-bid: #10b981 !important;
+  --orderbook-ask: #ef4444 !important;
+  --orderbook-surface: #1f2937 !important;
+  --orderbook-grid: #374151 !important;
+  --orderbook-pressure-high: #f87171 !important;
+  --orderbook-pressure-medium: #fbbf24 !important;
+  --orderbook-pressure-low: #34d399 !important;
+  
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+}
+
+/* Apply dark theme by default */
+html {
+  background-color: #0a0a0a !important;
+  color: #ededed !important;
+}
+
+body {
+  background-color: #0a0a0a !important;
+  color: #ededed !important;
+  font-family: inherit;
+}
+
+/* Ensure all elements use proper colors */
+* {
+  border-color: var(--border);
+}
+
+/* Fix common UI elements */
+.bg-background {
+  background-color: var(--background) !important;
+}
+
+.bg-card {
+  background-color: var(--card) !important;
+}
+
+.bg-muted {
+  background-color: var(--muted) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+
+.text-foreground {
+  color: var(--foreground) !important;
+}
+
+.text-muted-foreground {
+  color: var(--muted-foreground) !important;
+}
+
+.text-primary-foreground {
+  color: var(--primary-foreground) !important;
+}
+
+.text-card-foreground {
+  color: var(--card-foreground) !important;
+}
+
+.border-border {
+  border-color: var(--border) !important;
+}
+
+/* Hover states */
+.hover\:bg-accent:hover {
+  background-color: var(--accent) !important;
+}
+
+.hover\:text-accent-foreground:hover {
+  color: var(--accent-foreground) !important;
+}
+
+.hover\:bg-primary\/80:hover {
+  background-color: rgb(59 130 246 / 0.8) !important;
+}
+
+/* Orderbook specific styling */
+.text-orderbook-bid {
+  color: var(--orderbook-bid) !important;
+}
+
+.text-orderbook-ask {
+  color: var(--orderbook-ask) !important;
+}
+
+.bg-orderbook-surface {
+  background-color: var(--orderbook-surface) !important;
+}
+
+/* Form elements */
+input,
+select,
+textarea,
+button {
+  background-color: var(--input);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+button {
+  color: inherit;
+}
+
+/* Ensure readable text everywhere */
+.absolute,
+.relative,
+.fixed {
+  color: var(--foreground);
+}
+
+/* Smooth transitions */
+html,
+body,
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Canvas and 3D elements */
+canvas {
+  background: transparent !important;
+}
+
+/* Specific button styling fixes */
+button.bg-card {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+  border: 1px solid var(--border) !important;
+}
+
+button.bg-primary {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+
+/* Green/Red button colors */
+.bg-green-600 {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+.hover\:bg-green-700:hover {
+  background-color: #047857 !important;
+}
+
+.bg-blue-400 {
+  background-color: #60a5fa !important;
+}
+
+.bg-yellow-400 {
+  background-color: #facc15 !important;
+}
+
+.bg-red-400 {
+  background-color: #f87171 !important;
+}
+
+.bg-gray-400 {
+  background-color: #9ca3af !important;
+}
+
+/* Status indicator colors */
+.text-green-400 {
+  color: #34d399 !important;
+}
+
+.text-blue-400 {
+  color: #60a5fa !important;
+}
+
+.text-yellow-400 {
+  color: #facc15 !important;
+}
+
+.text-red-400 {
+  color: #f87171 !important;
+}
+
+.text-gray-400 {
+  color: #9ca3af !important;
 }
 
 /* Light theme overrides */

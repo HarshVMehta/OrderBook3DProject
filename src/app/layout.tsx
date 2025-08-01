@@ -36,12 +36,35 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                // Force dark theme immediately
+                document.documentElement.classList.add('dark');
+                document.documentElement.style.backgroundColor = '#0a0a0a';
+                document.documentElement.style.color = '#ededed';
+                if (document.body) {
+                  document.body.classList.add('dark');
+                  document.body.style.backgroundColor = '#0a0a0a';
+                  document.body.style.color = '#ededed';
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} dark bg-background text-foreground antialiased`}
         suppressHydrationWarning
+        style={{
+          backgroundColor: '#0a0a0a',
+          color: '#ededed'
+        }}
       >
-        <ThemeProvider defaultTheme="system">
+        <ThemeProvider defaultTheme="dark">
           {children}
         </ThemeProvider>
       </body>
